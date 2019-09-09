@@ -1,8 +1,20 @@
 package utils
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
+	"github.com/dchest/uniuri"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
 	"net"
 	"net/http"
+	"os"
+	"time"
 )
 
 func GetAllFormRequestValue(r *http.Request) map[string]interface{} {
@@ -33,4 +45,125 @@ func GetLocalIP() string {
 		}
 	}
 	return ""
+}
+
+const (
+	_                     = iota
+	KB                int = 1 << (10 * iota)
+	MB
+	GB
+	RandomChar = "abcdefghijklmnopqrstuvwxyz0123456789_"
+)
+
+type Sizer interface {
+	Size() int64
+}
+
+func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path string , maxWith int , maxHeight int , maxSize int) (chan string, error) {
+
+	err := r.ParseMultipartForm(32 << 20) //32 MB
+
+	if err != nil{
+		return nil, err
+	}
+
+	allFile := r.MultipartForm.File[keyFileValue]
+
+	fileCount := len(allFile)
+
+	if fileCount > 0 {
+
+		if err := FolderMaker(path); err != nil {
+			fmt.Println(err.Error())
+			return nil, err
+		}
+
+		fileNameChan := make(chan string, fileCount)
+
+		for _, value := range allFile {
+			file, err := value.Open()
+
+			if err != nil {
+				return nil, err
+			}
+
+			if fileName, errImageWriter := ImageWriterByMultiPart(file , path , maxWith , maxHeight , maxSize ); errImageWriter != nil{
+				return nil, errImageWriter
+			}else
+			{
+				fileNameChan <- fileName
+			}
+
+		}
+
+		return fileNameChan, nil
+
+	}
+
+
+	return nil, nil
+
+}
+
+
+func ImageWriterByMultiPart(file multipart.File, path string , maxWith int , maxHeight int , maxSize int) (string, error) {
+	buffer := make([]byte, file.(Sizer).Size())
+
+	for {
+
+		value, err := file.Read(buffer)
+
+		if err != nil && err != io.EOF {
+			return "", err
+		}
+		if value == 0 {
+			break
+		}
+	}
+
+	if err := file.Close(); err != nil {
+		return "", err
+	}
+
+	conf, format, err := image.DecodeConfig(bytes.NewReader(buffer))
+	if err != nil {
+		return "", err
+	}
+
+	if format != "jpeg" && format != "png" && format != "jpg" {
+		return "", errors.New(" format haye jpeg , png , jpg pazirofte mishavad")
+	}
+
+	if conf.Height > maxHeight || conf.Width > maxWith {
+
+		return "", errors.New(fmt.Sprintf("tasvir bayad kochaktar az %d x %d pixel bashand", maxWith , maxHeight))
+	}
+
+	if len(buffer) >= maxSize*MB {
+		return "", errors.New(fmt.Sprintf("tasvir bayad kochaktar az %d hajm dashte bashand", MB))
+	}
+
+	fileName := uniuri.NewLenChars(10, []byte(RandomChar)) + fmt.Sprint(time.Now().Unix())
+
+	if errIo := ioutil.WriteFile(path+fileName+"."+format, buffer, 0700); errIo != nil {
+		return "", errIo
+	}
+
+	return fileName + "." + format, nil
+}
+
+
+func FolderMaker(path string) error {
+
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			if errMkDir := os.MkdirAll(path, 0700); err != nil {
+				return errMkDir
+			}
+		}
+	} else {
+		return err
+	}
+
+	return nil
 }
