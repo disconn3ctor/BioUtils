@@ -83,13 +83,8 @@ func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path str
 		fileNameChan := make(chan string, fileCount)
 
 		for _, value := range allFile {
-			file, err := value.Open()
 
-			if err != nil {
-				return nil, err
-			}
-
-			if fileName, errImageWriter := ImageWriterByMultiPart(file , path , maxWith , maxHeight , maxSize ); errImageWriter != nil{
+			if fileName, errImageWriter := ImageWriterByFileHeader(value , path , maxWith , maxHeight , maxSize ); errImageWriter != nil{
 				return nil, errImageWriter
 			}else
 			{
@@ -108,8 +103,15 @@ func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path str
 }
 
 
-func ImageWriterByMultiPart(file multipart.File, path string , maxWith int , maxHeight int , maxSize int) (string, error) {
-	buffer := make([]byte, file.(Sizer).Size())
+func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string , maxWith int , maxHeight int , maxSize int) (string, error) {
+
+	file, err := fileHeader.Open()
+
+	if err != nil{
+		return "", err
+	}
+
+	buffer := make([]byte, fileHeader.Size)
 
 	for {
 
@@ -154,6 +156,93 @@ func ImageWriterByMultiPart(file multipart.File, path string , maxWith int , max
 	return fileName + "." + format, nil
 }
 
+
+func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string , maxSize int) (chan string, error) {
+
+	err := r.ParseMultipartForm(32 << 20) //32 MB
+
+	if err != nil {
+		return nil, err
+	}
+
+	allFile := r.MultipartForm.File[keyFileValue]
+
+	fileCount := len(allFile)
+
+	if fileCount > 0 {
+
+		if err := FolderMaker(path); err != nil {
+			fmt.Println(err.Error())
+			return nil, err
+		}
+
+		fileNameChan := make(chan string, fileCount)
+
+		for _, value := range allFile {
+
+
+			if fileName, errAudioWriter := AudioWriterByFileHeader(value , path , maxSize ); errAudioWriter != nil{
+				return nil, errAudioWriter
+			}else
+			{
+				fileNameChan <- fileName
+			}
+
+		}
+
+		return fileNameChan, nil
+
+	}
+
+	return nil, nil
+}
+
+func AudioWriterByFileHeader(fileHeader *multipart.FileHeader,  path string, maxSize int)(string, error) {
+
+	format := fileHeader.Filename[len(fileHeader.Filename)-3:]
+
+	if format != "mp3" && format != "wav" && format != "aac" {
+		return "", errors.New(" format haye mp3 , wav , aac pazirofte mishavad")
+	}
+
+	file, err := fileHeader.Open()
+
+	if err != nil{
+		return "", err
+	}
+
+	buffer := make([]byte, fileHeader.Size)
+
+	for {
+
+		value, err := file.Read(buffer)
+
+		if err != nil && err != io.EOF {
+			return "", err
+		}
+		if value == 0 {
+			break
+		}
+	}
+
+	if err := file.Close(); err != nil {
+		return "", err
+	}
+
+
+	if len(buffer) >= maxSize*MB {
+		return "", errors.New(fmt.Sprintf("file bayad kochaktar az %d MB hajm dashte bashand", maxSize))
+	}
+
+	fileName := uniuri.NewLenChars(10, []byte(RandomChar)) + fmt.Sprint(time.Now().Unix())
+
+
+	if errIo := ioutil.WriteFile(path+fileName+"."+format, buffer, 0700); errIo != nil {
+		return "", errIo
+	}
+
+	return fileName + "." + format, nil
+}
 
 func FolderMaker(path string) error {
 
