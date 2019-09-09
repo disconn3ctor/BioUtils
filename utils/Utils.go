@@ -17,6 +17,18 @@ import (
 	"time"
 )
 
+const (
+	_                     = iota
+	KB                int = 1 << (10 * iota)
+	MB
+	GB
+	RandomChar = "abcdefghijklmnopqrstuvwxyz0123456789_"
+)
+
+type Sizer interface {
+	Size() int64
+}
+
 func GetAllFormRequestValue(r *http.Request) map[string]interface{} {
 	clearMapData := make(map[string]interface{})
 
@@ -47,17 +59,7 @@ func GetLocalIP() string {
 	return ""
 }
 
-const (
-	_                     = iota
-	KB                int = 1 << (10 * iota)
-	MB
-	GB
-	RandomChar = "abcdefghijklmnopqrstuvwxyz0123456789_"
-)
 
-type Sizer interface {
-	Size() int64
-}
 
 func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path string , maxWith int , maxHeight int , maxSize int) (chan string, error) {
 
