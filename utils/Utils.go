@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/BioDread/BioJwt/jwt"
 	"github.com/dchest/uniuri"
 	"image"
 	_ "image/jpeg"
@@ -17,7 +16,6 @@ import (
 	"os"
 	"strings"
 	"time"
-	"github.com/BioDread/BioJwt"
 )
 
 func GetAllFormRequestValue(r *http.Request) map[string]interface{} {
