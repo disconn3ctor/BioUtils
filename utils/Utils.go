@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/BioDread/BioJwt/jwt"
 	"github.com/dchest/uniuri"
 	"image"
 	_ "image/jpeg"
@@ -14,7 +15,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
+	"github.com/BioDread/BioJwt"
 )
 
 func GetAllFormRequestValue(r *http.Request) map[string]interface{} {
@@ -166,4 +169,24 @@ func FolderMaker(path string) error {
 	}
 
 	return nil
+}
+
+func ExteraxtTokenFromHeader(key string, r *http.Request) (string, error) {
+
+	authorizationValue := r.Header.Get("Authorization")
+
+	if len(authorizationValue) == 0{
+
+		return "" , errors.New("token bayad be sorate Bearer Token ersal shavad")
+
+	}else
+	{
+		bearerTokenSlice := strings.Split(authorizationValue , " ")
+		if bearerTokenSlice[0] != "Bearer"{
+			return "" , errors.New("kalameye kelidye Bearer ersal nashode ast")
+		}
+		return bearerTokenSlice[1], nil
+
+	}
+
 }
