@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -278,4 +279,10 @@ func ExteraxtTokenFromHeader(key string, r *http.Request) (string, error) {
 
 	}
 
+}
+
+func StringToUint(value string) uint64 {
+	uintValue, _ := strconv.ParseUint(value, 10, 32)
+
+	return uintValue
 }
