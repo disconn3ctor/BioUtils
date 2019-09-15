@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/go-resty/resty/v2"
 )
 
 const (
@@ -285,4 +286,80 @@ func StringToUint(value string) uint64 {
 	uintValue, _ := strconv.ParseUint(value, 10, 32)
 
 	return uintValue
+}
+
+
+
+func PostAllFileToThisURL(r *http.Request , fileKey string,formDataMap map[string]string , url string) (string , error) {
+
+	err := r.ParseMultipartForm(32 << 20) //32 MB
+
+	if err != nil{
+		return  "" ,err
+	}
+
+	var fileByteData []*bytes.Reader
+
+	for _, fileHeader := range r.MultipartForm.File[fileKey] {
+
+		file, err := fileHeader.Open()
+
+		if err != nil {
+			return "" ,err
+		}
+
+		byteArray, err := ioutil.ReadAll(file)
+		if err != nil {
+			return "" ,err
+		}
+
+		fileByteData = append(fileByteData, bytes.NewReader(byteArray))
+	}
+
+	if len(fileByteData) != 0 {
+
+		return postBytesToThisURL(fileByteData , fileKey , formDataMap , url)
+	}
+
+
+	return "" ,nil
+}
+
+func postBytesToThisURL(fileByteData []*bytes.Reader , key string , formDataMap map[string]string , url string) (string ,error) {
+	restyClient := resty.New().R()
+
+	for _, value := range fileByteData {
+		restyClient.SetFileReader(key , key , value)
+	}
+
+	response, err := restyClient.SetFormData(formDataMap).Post(url)
+	if err != nil {
+		return "" ,err
+	}
+	defer func() {restyClient = nil}()
+
+	if response.StatusCode() != http.StatusOK {
+		return "",errors.New("error status "+fmt.Sprint(response.String()))
+	}else
+	{
+		return response.String() , nil
+	}
+
+}
+
+func StringSplitterToUint(value string, splitter string) ([]uint, error) {
+	var uintValueArray []uint
+
+	if len(value) > 0 {
+		strArray := strings.Split(value, splitter)
+		for _, s := range strArray {
+			if convertedValue, err := strconv.ParseUint(s, 10, 32); err != nil {
+				return nil, errors.New("meghdare vorody adad sahih nemibashad")
+			} else {
+				uintValueArray = append(uintValueArray, uint(convertedValue))
+			}
+		}
+	}
+
+	return uintValueArray, nil
 }
