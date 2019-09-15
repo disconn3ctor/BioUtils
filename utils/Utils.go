@@ -388,3 +388,23 @@ func DifferentIds(list interface{}, ids []uint) error {
 	}
 	return nil
 }
+
+func ServiceLocator(url string) (ServiceLocatorModel , error){
+	restyClient := resty.New().R()
+
+	serviceLocatorModel := ServiceLocatorModel{}
+
+	if response, err := restyClient.SetResult(&serviceLocatorModel).Get(url); err != nil {
+		return serviceLocatorModel , err
+	} else
+	{
+		if response.StatusCode() != http.StatusOK{
+			return serviceLocatorModel , errors.New(response.String())
+		}else
+		{
+			return serviceLocatorModel , nil
+		}
+
+	}
+
+}
