@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dchest/uniuri"
+	"github.com/go-resty/resty/v2"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
@@ -14,10 +15,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/go-resty/resty/v2"
 )
 
 const (
@@ -362,4 +363,28 @@ func StringSplitterToUint(value string, splitter string) ([]uint, error) {
 	}
 
 	return uintValueArray, nil
+}
+
+func DifferentIds(list interface{}, ids []uint) error {
+	founded := false
+
+	valueOfData := reflect.ValueOf(list)
+
+	if valueOfData.Len() != len(ids) {
+		for i := 0; i < len(ids); i++ {
+			founded = false
+			for j := 0; j < valueOfData.Len(); j++ {
+				if ids[i] == uint(reflect.Indirect(valueOfData.Index(j)).FieldByName("ID").Uint()) {
+					founded = true
+					break
+				}
+			}
+
+			if !founded {
+
+				return errors.New("id e "+fmt.Sprint(ids[i])+" vojod nadard")
+			}
+		}
+	}
+	return nil
 }
