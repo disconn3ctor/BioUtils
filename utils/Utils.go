@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/dchest/uniuri"
 	"github.com/go-resty/resty/v2"
+	"github.com/tcolgate/mp3"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
@@ -22,12 +23,17 @@ import (
 )
 
 const (
-	_                     = iota
-	KB                int = 1 << (10 * iota)
+	_      = iota
+	KB int = 1 << (10 * iota)
 	MB
 	GB
 	RandomChar = "abcdefghijklmnopqrstuvwxyz0123456789_"
 )
+
+type AudioMeta struct {
+	Name    string
+	Bitrate string
+}
 
 type Sizer interface {
 	Size() int64
@@ -35,7 +41,6 @@ type Sizer interface {
 
 func GetAllFormRequestValue(r *http.Request) map[string]interface{} {
 	clearMapData := make(map[string]interface{})
-
 
 	// chon r.Form tamame maghadir ro to array mirikht on maghidir ro az array dar avrodam
 	for i, value := range r.Form {
@@ -63,13 +68,11 @@ func GetLocalIP() string {
 	return ""
 }
 
-
-
-func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path string , maxWith int , maxHeight int , maxSize int) (chan string, error) {
+func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path string, maxWith int, maxHeight int, maxSize int) (chan string, error) {
 
 	err := r.ParseMultipartForm(32 << 20) //32 MB
 
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -88,10 +91,9 @@ func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path str
 
 		for _, value := range allFile {
 
-			if fileName, errImageWriter := ImageWriterByFileHeader(value , path , maxWith , maxHeight , maxSize ); errImageWriter != nil{
+			if fileName, errImageWriter := ImageWriterByFileHeader(value, path, maxWith, maxHeight, maxSize); errImageWriter != nil {
 				return nil, errImageWriter
-			}else
-			{
+			} else {
 				fileNameChan <- fileName
 			}
 
@@ -101,17 +103,15 @@ func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path str
 
 	}
 
-
 	return nil, nil
 
 }
 
-
-func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string , maxWith int , maxHeight int , maxSize int) (string, error) {
+func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxWith int, maxHeight int, maxSize int) (string, error) {
 
 	file, err := fileHeader.Open()
 
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 
@@ -144,7 +144,7 @@ func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string , max
 
 	if conf.Height > maxHeight || conf.Width > maxWith {
 
-		return "", errors.New(fmt.Sprintf("tasvir bayad kochaktar az %d x %d pixel bashand", maxWith , maxHeight))
+		return "", errors.New(fmt.Sprintf("tasvir bayad kochaktar az %d x %d pixel bashand", maxWith, maxHeight))
 	}
 
 	if len(buffer) >= maxSize*MB {
@@ -160,8 +160,7 @@ func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string , max
 	return fileName + "." + format, nil
 }
 
-
-func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string , maxSize int) (chan string, error) {
+func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan AudioMeta, error) {
 
 	err := r.ParseMultipartForm(32 << 20) //32 MB
 
@@ -180,15 +179,13 @@ func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path str
 			return nil, err
 		}
 
-		fileNameChan := make(chan string, fileCount)
+		fileNameChan := make(chan AudioMeta, fileCount)
 
 		for _, value := range allFile {
 
-
-			if fileName, errAudioWriter := AudioWriterByFileHeader(value , path , maxSize ); errAudioWriter != nil{
+			if fileName, errAudioWriter := AudioWriterByFileHeader(value, path, maxSize); errAudioWriter != nil {
 				return nil, errAudioWriter
-			}else
-			{
+			} else {
 				fileNameChan <- fileName
 			}
 
@@ -201,18 +198,20 @@ func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path str
 	return nil, nil
 }
 
-func AudioWriterByFileHeader(fileHeader *multipart.FileHeader,  path string, maxSize int)(string, error) {
+func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxSize int) (AudioMeta, error) {
+
+	audioMeta := AudioMeta{}
 
 	format := fileHeader.Filename[len(fileHeader.Filename)-3:]
 
 	if format != "mp3" && format != "wav" && format != "aac" {
-		return "", errors.New(" format haye mp3 , wav , aac pazirofte mishavad")
+		return audioMeta, errors.New(" format haye mp3 , wav , aac pazirofte mishavad")
 	}
 
 	file, err := fileHeader.Open()
 
-	if err != nil{
-		return "", err
+	if err != nil {
+		return audioMeta, err
 	}
 
 	buffer := make([]byte, fileHeader.Size)
@@ -222,7 +221,7 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader,  path string, max
 		value, err := file.Read(buffer)
 
 		if err != nil && err != io.EOF {
-			return "", err
+			return audioMeta, err
 		}
 		if value == 0 {
 			break
@@ -230,22 +229,34 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader,  path string, max
 	}
 
 	if err := file.Close(); err != nil {
-		return "", err
+		return audioMeta, err
 	}
 
+	ioReader := bytes.NewReader(buffer)
+
+	mp3BitrateDecoder := mp3.NewDecoder(ioReader)
+	var mp3Frame mp3.Frame
+	skipped := 0
+	if err := mp3BitrateDecoder.Decode(&mp3Frame, &skipped); err != nil {
+		return audioMeta, err
+	}
+
+	mp3Bitrate := mp3Frame.Header().BitRate() / 1000
 
 	if len(buffer) >= maxSize*MB {
-		return "", errors.New(fmt.Sprintf("file bayad kochaktar az %d MB hajm dashte bashand", maxSize))
+		return audioMeta, errors.New(fmt.Sprintf("file bayad kochaktar az %d MB hajm dashte bashand", maxSize))
 	}
 
 	fileName := uniuri.NewLenChars(10, []byte(RandomChar)) + fmt.Sprint(time.Now().Unix())
 
-
 	if errIo := ioutil.WriteFile(path+fileName+"."+format, buffer, 0700); errIo != nil {
-		return "", errIo
+		return audioMeta, errIo
 	}
 
-	return fileName + "." + format, nil
+	audioMeta.Name = fileName + "." + format
+	audioMeta.Bitrate = fmt.Sprint(mp3Bitrate)
+
+	return audioMeta, nil
 }
 
 func FolderMaker(path string) error {
@@ -267,15 +278,14 @@ func ExteraxtTokenFromHeader(key string, r *http.Request) (string, error) {
 
 	authorizationValue := r.Header.Get("Authorization")
 
-	if len(authorizationValue) == 0{
+	if len(authorizationValue) == 0 {
 
-		return "" , errors.New("token bayad be sorate Bearer Token ersal shavad")
+		return "", errors.New("token bayad be sorate Bearer Token ersal shavad")
 
-	}else
-	{
-		bearerTokenSlice := strings.Split(authorizationValue , " ")
-		if bearerTokenSlice[0] != "Bearer"{
-			return "" , errors.New("kalameye kelidye Bearer ersal nashode ast")
+	} else {
+		bearerTokenSlice := strings.Split(authorizationValue, " ")
+		if bearerTokenSlice[0] != "Bearer" {
+			return "", errors.New("kalameye kelidye Bearer ersal nashode ast")
 		}
 		return bearerTokenSlice[1], nil
 
@@ -289,14 +299,12 @@ func StringToUint(value string) uint64 {
 	return uintValue
 }
 
-
-
-func PostAllFileToThisURL(r *http.Request , fileKey string,formDataMap map[string]string , url string) (string , error) {
+func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[string]string, url string) (string, error) {
 
 	err := r.ParseMultipartForm(32 << 20) //32 MB
 
-	if err != nil{
-		return  "" ,err
+	if err != nil {
+		return "", err
 	}
 
 	var fileByteData []*bytes.Reader
@@ -306,12 +314,12 @@ func PostAllFileToThisURL(r *http.Request , fileKey string,formDataMap map[strin
 		file, err := fileHeader.Open()
 
 		if err != nil {
-			return "" ,err
+			return "", err
 		}
 
 		byteArray, err := ioutil.ReadAll(file)
 		if err != nil {
-			return "" ,err
+			return "", err
 		}
 
 		fileByteData = append(fileByteData, bytes.NewReader(byteArray))
@@ -319,31 +327,29 @@ func PostAllFileToThisURL(r *http.Request , fileKey string,formDataMap map[strin
 
 	if len(fileByteData) != 0 {
 
-		return postBytesToThisURL(fileByteData , fileKey , formDataMap , url)
+		return postBytesToThisURL(fileByteData, fileKey, formDataMap, url)
 	}
 
-
-	return "" ,nil
+	return "", nil
 }
 
-func postBytesToThisURL(fileByteData []*bytes.Reader , key string , formDataMap map[string]string , url string) (string ,error) {
+func postBytesToThisURL(fileByteData []*bytes.Reader, key string, formDataMap map[string]string, url string) (string, error) {
 	restyClient := resty.New().R()
 
 	for _, value := range fileByteData {
-		restyClient.SetFileReader(key , key , value)
+		restyClient.SetFileReader(key, key, value)
 	}
 
 	response, err := restyClient.SetFormData(formDataMap).Post(url)
 	if err != nil {
-		return "" ,err
+		return "", err
 	}
-	defer func() {restyClient = nil}()
+	defer func() { restyClient = nil }()
 
 	if response.StatusCode() != http.StatusOK {
-		return "",errors.New("error status "+fmt.Sprint(response.String()))
-	}else
-	{
-		return response.String() , nil
+		return "", errors.New("error status " + fmt.Sprint(response.String()))
+	} else {
+		return response.String(), nil
 	}
 
 }
@@ -382,27 +388,25 @@ func DifferentIds(list interface{}, ids []uint) error {
 
 			if !founded {
 
-				return errors.New("id e "+fmt.Sprint(ids[i])+" vojod nadard")
+				return errors.New("id e " + fmt.Sprint(ids[i]) + " vojod nadard")
 			}
 		}
 	}
 	return nil
 }
 
-func ServiceLocator(url string) (ServiceLocatorModel , error){
+func ServiceLocator(url string) (ServiceLocatorModel, error) {
 	restyClient := resty.New().R()
 
 	serviceLocatorModel := ServiceLocatorModel{}
 
 	if response, err := restyClient.SetResult(&serviceLocatorModel).Get(url); err != nil {
-		return serviceLocatorModel , err
-	} else
-	{
-		if response.StatusCode() != http.StatusOK{
-			return serviceLocatorModel , errors.New(response.String())
-		}else
-		{
-			return serviceLocatorModel , nil
+		return serviceLocatorModel, err
+	} else {
+		if response.StatusCode() != http.StatusOK {
+			return serviceLocatorModel, errors.New(response.String())
+		} else {
+			return serviceLocatorModel, nil
 		}
 
 	}
