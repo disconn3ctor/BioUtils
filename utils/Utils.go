@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/dchest/uniuri"
 	"github.com/go-resty/resty/v2"
-	"github.com/tcolgate/mp3"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
@@ -29,11 +28,6 @@ const (
 	GB
 	RandomChar = "abcdefghijklmnopqrstuvwxyz0123456789_"
 )
-
-type AudioMeta struct {
-	Name    string
-	Bitrate string
-}
 
 type Sizer interface {
 	Size() int64
@@ -160,7 +154,7 @@ func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxW
 	return fileName + "." + format, nil
 }
 
-func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan AudioMeta, error) {
+func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan string, error) {
 
 	err := r.ParseMultipartForm(32 << 20) //32 MB
 
@@ -179,7 +173,7 @@ func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path str
 			return nil, err
 		}
 
-		fileNameChan := make(chan AudioMeta, fileCount)
+		fileNameChan := make(chan string, fileCount)
 
 		for _, value := range allFile {
 
@@ -198,20 +192,18 @@ func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path str
 	return nil, nil
 }
 
-func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxSize int) (AudioMeta, error) {
-
-	audioMeta := AudioMeta{}
+func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxSize int) (string, error) {
 
 	format := fileHeader.Filename[len(fileHeader.Filename)-3:]
 
 	if format != "mp3" && format != "wav" && format != "aac" {
-		return audioMeta, errors.New(" format haye mp3 , wav , aac pazirofte mishavad")
+		return "", errors.New(" format haye mp3 , wav , aac pazirofte mishavad")
 	}
 
 	file, err := fileHeader.Open()
 
 	if err != nil {
-		return audioMeta, err
+		return "", err
 	}
 
 	buffer := make([]byte, fileHeader.Size)
@@ -221,7 +213,7 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 		value, err := file.Read(buffer)
 
 		if err != nil && err != io.EOF {
-			return audioMeta, err
+			return "", err
 		}
 		if value == 0 {
 			break
@@ -229,34 +221,20 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 	}
 
 	if err := file.Close(); err != nil {
-		return audioMeta, err
+		return "", err
 	}
-
-	ioReader := bytes.NewReader(buffer)
-
-	mp3BitrateDecoder := mp3.NewDecoder(ioReader)
-	var mp3Frame mp3.Frame
-	skipped := 0
-	if err := mp3BitrateDecoder.Decode(&mp3Frame, &skipped); err != nil {
-		return audioMeta, err
-	}
-
-	mp3Bitrate := mp3Frame.Header().BitRate() / 1000
 
 	if len(buffer) >= maxSize*MB {
-		return audioMeta, errors.New(fmt.Sprintf("file bayad kochaktar az %d MB hajm dashte bashand", maxSize))
+		return "", errors.New(fmt.Sprintf("file bayad kochaktar az %d MB hajm dashte bashand", maxSize))
 	}
 
 	fileName := uniuri.NewLenChars(10, []byte(RandomChar)) + fmt.Sprint(time.Now().Unix())
 
 	if errIo := ioutil.WriteFile(path+fileName+"."+format, buffer, 0700); errIo != nil {
-		return audioMeta, errIo
+		return "", errIo
 	}
 
-	audioMeta.Name = fileName + "." + format
-	audioMeta.Bitrate = fmt.Sprint(mp3Bitrate)
-
-	return audioMeta, nil
+	return fileName + "." + format, nil
 }
 
 func FolderMaker(path string) error {
