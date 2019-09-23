@@ -35,6 +35,11 @@ type AudioMeta struct {
 	Bitrate int
 }
 
+type FileBytesMeta struct {
+	Reader *bytes.Reader
+	Name string
+}
+
 type Sizer interface {
 	Size() int64
 }
@@ -307,7 +312,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 		return "", err
 	}
 
-	var fileByteData []*bytes.Reader
+	var fileByteData []FileBytesMeta
 
 	for _, fileHeader := range r.MultipartForm.File[fileKey] {
 
@@ -322,7 +327,11 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 			return "", err
 		}
 
-		fileByteData = append(fileByteData, bytes.NewReader(byteArray))
+		fileBytesMeta := FileBytesMeta{}
+		fileBytesMeta.Name = fileHeader.Filename
+		fileBytesMeta.Reader = bytes.NewReader(byteArray)
+
+		fileByteData = append(fileByteData, fileBytesMeta)
 	}
 
 	if len(fileByteData) != 0 {
@@ -334,11 +343,11 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 }
 
 
-func postBytesToThisURL(fileByteData []*bytes.Reader, key string, formDataMap map[string]string, url string) (string, error) {
+func postBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap map[string]string, url string ) (string, error) {
 	restyClient := resty.New().R()
 
 	for _, value := range fileByteData {
-		restyClient.SetFileReader(key, key, value)
+		restyClient.SetFileReader(key, value.Name, value.Reader)
 	}
 
 	response, err := restyClient.SetFormData(formDataMap).Post(url)
