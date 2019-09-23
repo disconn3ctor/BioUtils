@@ -333,52 +333,6 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 	return "", nil
 }
 
-func PostAllAudioFileToThisURL(r *http.Request, fileKey string, formDataMap map[string]string, url string) (string, error) {
-
-	err := r.ParseMultipartForm(32 << 20) //32 MB
-
-	if err != nil {
-		return "", err
-	}
-
-	var fileByteData []*bytes.Reader
-
-	for i, fileHeader := range r.MultipartForm.File[fileKey] {
-
-		file, err := fileHeader.Open()
-
-		if err != nil {
-			return "", err
-		}
-
-		byteArray, err := ioutil.ReadAll(file)
-		if err != nil {
-			return "", err
-		}
-
-		ioReader := bytes.NewReader(byteArray)
-
-		mp3BitrateDecoder := mp3.NewDecoder(ioReader)
-		var mp3Frame mp3.Frame
-		skipped := 0
-		if err := mp3BitrateDecoder.Decode(&mp3Frame, &skipped); err != nil {
-			return "", err
-		}
-
-		mp3Bitrate := mp3Frame.Header().BitRate() / 1000
-
-		formDataMap["Bitrate"+fmt.Sprint(i)] = fmt.Sprint(mp3Bitrate)
-
-		fileByteData = append(fileByteData, bytes.NewReader(byteArray))
-	}
-
-	if len(fileByteData) != 0 {
-
-		return postBytesToThisURL(fileByteData, fileKey, formDataMap, url)
-	}
-
-	return "", nil
-}
 
 func postBytesToThisURL(fileByteData []*bytes.Reader, key string, formDataMap map[string]string, url string) (string, error) {
 	restyClient := resty.New().R()
