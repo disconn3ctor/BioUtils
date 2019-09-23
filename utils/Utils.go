@@ -243,7 +243,8 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 
 	mp3Bitrate := mp3Frame.Header().BitRate() / 1000
 
-	if err := FolderMaker(path + fmt.Sprint(mp3Bitrate) + "/"); err != nil {
+	path = path + fmt.Sprint(mp3Bitrate) + "/"
+	if err := FolderMaker(path); err != nil {
 		fmt.Println(err.Error())
 		return audioMeta, err
 	}
