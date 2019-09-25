@@ -1,12 +1,15 @@
 package utils
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"github.com/dchest/uniuri"
 	"github.com/go-resty/resty/v2"
 	"github.com/tcolgate/mp3"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
@@ -341,6 +344,44 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 	}
 
 	return "", nil
+}
+
+func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
+
+	var dataArray []string
+	err := r.ParseMultipartForm(32 << 20) //32 MB
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fileHeader := range r.MultipartForm.File[fileKey] {
+
+		file, err := fileHeader.Open()
+
+		if err != nil {
+
+		}
+
+		byteArray, err := ioutil.ReadAll(file)
+		if err != nil {
+
+		}
+
+		strValue := ""
+		//scanner := bufio.NewScanner(transform.NewReader(bytes.NewReader(byteContainer), unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewDecoder()))
+		scanner := bufio.NewScanner(transform.NewReader(bytes.NewReader(byteArray), unicode.UTF8.NewDecoder()))
+		for scanner.Scan() {
+
+			strValue += scanner.Text() + "\r\n"
+
+		}
+
+		dataArray = append(dataArray, strValue)
+	}
+
+	return dataArray , nil
+
 }
 
 
