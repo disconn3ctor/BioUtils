@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dchest/uniuri"
+	"github.com/dhowden/tag"
 	"github.com/go-resty/resty/v2"
 	"github.com/tcolgate/mp3"
 	"golang.org/x/text/encoding/unicode"
@@ -340,7 +341,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 
 	if len(fileByteData) != 0 {
 
-		return postBytesToThisURL(fileByteData, fileKey, formDataMap, url)
+		return PostBytesToThisURL(fileByteData, fileKey, formDataMap, url)
 	}
 
 	return "", nil
@@ -360,12 +361,12 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 		file, err := fileHeader.Open()
 
 		if err != nil {
-
+			return nil , err
 		}
 
 		byteArray, err := ioutil.ReadAll(file)
 		if err != nil {
-
+			return nil , err
 		}
 
 		strValue := ""
@@ -385,7 +386,49 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 }
 
 
-func postBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap map[string]string, url string ) (string, error) {
+func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]FileBytesMeta, error){
+
+	var fileBytesMetasArray []FileBytesMeta
+	err := r.ParseMultipartForm(32 << 20) //32 MB
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i, fileHeader := range r.MultipartForm.File[fileKey] {
+
+		file, err := fileHeader.Open()
+
+		if err != nil {
+			return nil , err
+		}
+
+		byteArray, err := ioutil.ReadAll(file)
+		if err != nil {
+			return nil , err
+		}
+
+		ioReader := bytes.NewReader(byteArray)
+
+		metadata, err := tag.ReadFrom(ioReader)
+		if err != nil {
+			return nil , err
+		}
+
+		fileMeta := FileBytesMeta{}
+		fileMeta.Name = "albumArt"+fmt.Sprint(i)+"."+metadata.Picture().Ext
+		fileMeta.Reader = bytes.NewReader(metadata.Picture().Data)
+
+		fileBytesMetasArray = append(fileBytesMetasArray, fileMeta)
+
+	}
+
+	return fileBytesMetasArray, nil
+
+}
+
+
+func PostBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap map[string]string, url string ) (string, error) {
 	restyClient := resty.New().R()
 
 	for _, value := range fileByteData {
