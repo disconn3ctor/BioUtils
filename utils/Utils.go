@@ -39,6 +39,8 @@ type AudioMeta struct {
 	Bitrate int
 }
 
+
+
 type FileBytesMeta struct {
 	Reader *bytes.Reader
 	Name string
@@ -158,6 +160,88 @@ func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxW
 
 	if len(buffer) >= maxSize*MB {
 		return "", errors.New(fmt.Sprintf("tasvir bayad kochaktar az %d hajm dashte bashand", MB))
+	}
+
+	fileName := uniuri.NewLenChars(10, []byte(RandomChar)) + fmt.Sprint(time.Now().Unix())
+
+	if errIo := ioutil.WriteFile(path+fileName+"."+format, buffer, 0700); errIo != nil {
+		return "", errIo
+	}
+
+	return fileName + "." + format, nil
+}
+
+
+func WriteAllPostVideoFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan string, error) {
+
+	err := r.ParseMultipartForm(32 << 20) //32 MB
+
+	if err != nil {
+		return nil, err
+	}
+
+	allFile := r.MultipartForm.File[keyFileValue]
+
+	fileCount := len(allFile)
+
+	if fileCount > 0 {
+
+		fileNameChan := make(chan string, fileCount)
+
+		for _, value := range allFile {
+
+			if fileName, errAudioWriter := VideoWriterByFileHeader(value, path, maxSize); errAudioWriter != nil {
+				return nil, errAudioWriter
+			} else {
+				fileNameChan <- fileName
+			}
+
+		}
+
+		return fileNameChan, nil
+
+	}
+
+	return nil, nil
+}
+
+
+func VideoWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxSize int) (string, error) {
+
+
+	format := fileHeader.Filename[len(fileHeader.Filename)-3:]
+
+	if format != "mp4" {
+		return "", errors.New(" faghat format mp4 pazirofte mishavad")
+	}
+
+	file, err := fileHeader.Open()
+
+	if err != nil {
+		return "", err
+	}
+
+	buffer := make([]byte, fileHeader.Size)
+
+	for {
+
+		value, err := file.Read(buffer)
+
+		if err != nil && err != io.EOF {
+			return "", err
+		}
+		if value == 0 {
+			break
+		}
+	}
+
+	if err := file.Close(); err != nil {
+		return "", err
+	}
+
+
+	if len(buffer) >= maxSize*MB {
+		return "", errors.New(fmt.Sprintf("file bayad kochaktar az %d MB hajm dashte bashand", maxSize))
 	}
 
 	fileName := uniuri.NewLenChars(10, []byte(RandomChar)) + fmt.Sprint(time.Now().Unix())
