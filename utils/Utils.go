@@ -239,6 +239,10 @@ func VideoWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 		return "", err
 	}
 
+	if err := FolderMaker(path); err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
 
 	if len(buffer) >= maxSize*MB {
 		return "", errors.New(fmt.Sprintf("file bayad kochaktar az %d MB hajm dashte bashand", maxSize))
