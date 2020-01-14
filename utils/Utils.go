@@ -399,7 +399,7 @@ func StringToUint(value string) uint64 {
 
 func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[string]string, url string) (string, error) {
 
-	err := r.ParseMultipartForm(32 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //32 MB
 
 	if err != nil {
 		return "", err
@@ -410,6 +410,8 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 	for _, fileHeader := range r.MultipartForm.File[fileKey] {
 
 		file, err := fileHeader.Open()
+
+		defer file.Close()
 
 		if err != nil {
 			return "", err
@@ -438,7 +440,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 
 	var dataArray []string
-	err := r.ParseMultipartForm(32 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //32 MB
 
 	if err != nil {
 		return nil, err
@@ -447,6 +449,8 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 	for _, fileHeader := range r.MultipartForm.File[fileKey] {
 
 		file, err := fileHeader.Open()
+
+		defer file.Close()
 
 		if err != nil {
 			return nil , err
@@ -477,7 +481,7 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]FileBytesMeta, error){
 
 	var fileBytesMetasArray []FileBytesMeta
-	err := r.ParseMultipartForm(32 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //32 MB
 
 	if err != nil {
 		return nil, err
@@ -486,6 +490,8 @@ func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]File
 	for i, fileHeader := range r.MultipartForm.File[fileKey] {
 
 		file, err := fileHeader.Open()
+
+		defer file.Close()
 
 		if err != nil {
 			return nil , err
