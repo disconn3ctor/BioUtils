@@ -262,7 +262,7 @@ func VideoWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 
 func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan AudioMeta, error) {
 
-	err := r.ParseMultipartForm(2 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //2 MB
 
 	if err != nil {
 		return nil, err
@@ -461,7 +461,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 
 	var dataArray []string
-	err := r.ParseMultipartForm(2 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //2 MB
 
 	if err != nil {
 		return nil, err
@@ -509,7 +509,7 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]FileBytesMeta, error){
 
 	var fileBytesMetasArray []FileBytesMeta
-	err := r.ParseMultipartForm(2 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //2 MB
 
 	if err != nil {
 		return nil, err
