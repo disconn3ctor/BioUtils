@@ -81,7 +81,7 @@ func GetLocalIP() string {
 
 func WriteAllPostImageFromRequest(r *http.Request, keyFileValue string, path string, maxWith int, maxHeight int, maxSize int) (chan string, error) {
 
-	err := r.ParseMultipartForm(32 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //2 MB
 
 	if err != nil {
 		return nil, err
@@ -168,13 +168,15 @@ func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxW
 		return "", errIo
 	}
 
+	buffer = nil
+
 	return fileName + "." + format, nil
 }
 
 
 func WriteAllPostVideoFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan string, error) {
 
-	err := r.ParseMultipartForm(32 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //2 MB
 
 	if err != nil {
 		return nil, err
@@ -253,13 +255,14 @@ func VideoWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 	if errIo := ioutil.WriteFile(path+fileName+"."+format, buffer, 0700); errIo != nil {
 		return "", errIo
 	}
+	buffer = nil
 
 	return fileName + "." + format, nil
 }
 
 func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan AudioMeta, error) {
 
-	err := r.ParseMultipartForm(32 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //32 MB
 
 	if err != nil {
 		return nil, err
@@ -354,6 +357,9 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 	audioMeta.Name = fileName + "." + format
 	audioMeta.Bitrate = int(mp3Bitrate)
 
+	buffer = nil
+	ioReader = nil
+
 	return audioMeta, nil
 }
 
@@ -385,7 +391,12 @@ func ExteraxtTokenFromHeader(key string, r *http.Request) (string, error) {
 		if bearerTokenSlice[0] != "Bearer" {
 			return "", errors.New("kalameye kelidye Bearer ersal nashode ast")
 		}
-		return bearerTokenSlice[1], nil
+
+		s := bearerTokenSlice[1]
+
+		bearerTokenSlice = nil
+
+		return s, nil
 
 	}
 
@@ -399,7 +410,7 @@ func StringToUint(value string) uint64 {
 
 func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[string]string, url string) (string, error) {
 
-	err := r.ParseMultipartForm(2 << 20) //32 MB
+	err := r.ParseMultipartForm(2 << 20) //2 MB
 
 	if err != nil {
 		return "", err
@@ -411,7 +422,6 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 
 		file, err := fileHeader.Open()
 
-		defer file.Close()
 
 		if err != nil {
 			return "", err
@@ -427,12 +437,23 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 		fileBytesMeta.Reader = bytes.NewReader(byteArray)
 
 		fileByteData = append(fileByteData, fileBytesMeta)
+
+		err = file.Close()
+
+		if err != nil {
+			return "", err
+		}
+
+		byteArray = nil
+
 	}
 
 	if len(fileByteData) != 0 {
 
 		return PostBytesToThisURL(fileByteData, fileKey, formDataMap, url)
 	}
+
+	fileByteData = nil
 
 	return "", nil
 }
@@ -449,8 +470,6 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 	for _, fileHeader := range r.MultipartForm.File[fileKey] {
 
 		file, err := fileHeader.Open()
-
-		defer file.Close()
 
 		if err != nil {
 			return nil , err
@@ -471,6 +490,15 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 		}
 
 		dataArray = append(dataArray, strValue)
+
+		err = file.Close()
+
+		if err != nil {
+			return nil, err
+		}
+
+		byteArray = nil
+
 	}
 
 	return dataArray , nil
@@ -491,7 +519,6 @@ func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]File
 
 		file, err := fileHeader.Open()
 
-		defer file.Close()
 
 		if err != nil {
 			return nil , err
@@ -515,6 +542,14 @@ func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]File
 
 		fileBytesMetasArray = append(fileBytesMetasArray, fileMeta)
 
+		err = file.Close()
+
+		if err != nil {
+			return nil, err
+		}
+
+		byteArray = nil
+
 	}
 
 	return fileBytesMetasArray, nil
@@ -534,6 +569,8 @@ func PostBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap ma
 		return "", err
 	}
 	defer func() { restyClient = nil }()
+
+	fileByteData = nil
 
 	if response.StatusCode() != http.StatusOK {
 		return "", errors.New("error status " + fmt.Sprint(response.String()))
