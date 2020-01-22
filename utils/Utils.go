@@ -382,6 +382,18 @@ func FolderMaker(path string) error {
 	return nil
 }
 
+func ParsFormValue(key string , r *http.Request) error {
+
+	if r.Form == nil {
+		return r.ParseMultipartForm(2 << 20)
+	}
+	if vs := r.Form[""]; len(vs) > 0 {
+		fmt.Println(vs[0])
+	}
+
+	return nil
+}
+
 func ExteraxtTokenFromHeader(key string, r *http.Request) (string, error) {
 
 	authorizationValue := r.Header.Get("Authorization")
