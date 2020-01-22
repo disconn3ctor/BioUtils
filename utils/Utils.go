@@ -260,6 +260,10 @@ func VideoWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 	return fileName + "." + format, nil
 }
 
+func IsMultipart(r *http.Request) bool {
+	return r.Header.Get("Content-Type") == "multipart/form-data"
+}
+
 func WriteAllPostAudioFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan AudioMeta, error) {
 
 	err := r.ParseMultipartForm(2 << 20) //2 MB
