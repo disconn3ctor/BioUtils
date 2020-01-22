@@ -392,8 +392,8 @@ func ExteraxtTokenFromHeader(key string, r *http.Request) (string, error) {
 
 	} else {
 		bearerTokenSlice := strings.Split(authorizationValue, " ")
-		if bearerTokenSlice[0] != "Bearer" {
-			return "", errors.New("kalameye kelidye Bearer ersal nashode ast")
+		if bearerTokenSlice[0] != "Bearer" || len(bearerTokenSlice) < 2{
+			return "", errors.New("kalameye kelidye Bearer ya token ersal nashode ast ")
 		}
 
 		s := bearerTokenSlice[1]
