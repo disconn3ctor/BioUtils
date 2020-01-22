@@ -382,10 +382,10 @@ func FolderMaker(path string) error {
 	return nil
 }
 
-func ParsFormValue(key string , r *http.Request) error { //
+func ParsFormValue(key string , r *http.Request) error {
 
 	if r.Form == nil {
-		return r.ParseMultipartForm(2 << 20)
+		_ = r.ParseMultipartForm(2 << 20)
 	}
 	if vs := r.Form[""]; len(vs) > 0 {
 		fmt.Println(vs[0])
