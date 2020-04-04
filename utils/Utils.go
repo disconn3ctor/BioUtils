@@ -206,7 +206,13 @@ func WriteAllPostVideoFromRequest(r *http.Request, keyFileValue string, path str
 
 func VideoWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxSize int) (string, error) {
 
-	format := fileHeader.Filename[len(fileHeader.Filename)-3:]
+	format := ""
+	if len(fileHeader.Filename) >= 5 {
+		if strings.Contains(fileHeader.Filename, ".") {
+
+			format = fileHeader.Filename[len(fileHeader.Filename)-3:]
+		}
+	}
 
 	if format != "mp4" {
 		return "", errors.New(" faghat format mp4 pazirofte mishavad")
