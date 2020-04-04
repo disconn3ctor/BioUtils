@@ -427,7 +427,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 		return "", err
 	}
 
-	var fileByteData []FileBytesMeta
+	fileByteData := []FileBytesMeta{}
 
 	for _, fileHeader := range r.MultipartForm.File[fileKey] {
 
