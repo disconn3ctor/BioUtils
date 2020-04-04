@@ -297,8 +297,11 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 	audioMeta := AudioMeta{}
 
 	format := ""
-	if len(fileHeader.Filename) >= 3 {
-		format = fileHeader.Filename[len(fileHeader.Filename)-3:]
+	if len(fileHeader.Filename) >= 5 {
+		if strings.Contains(fileHeader.Filename, ".") {
+
+			format = fileHeader.Filename[len(fileHeader.Filename)-3:]
+		}
 	}
 
 	if format != "mp3" && format != "wav" && format != "aac" {
