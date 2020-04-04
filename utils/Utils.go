@@ -296,7 +296,10 @@ func AudioWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxS
 
 	audioMeta := AudioMeta{}
 
-	format := fileHeader.Filename[len(fileHeader.Filename)-3:]
+	format := ""
+	if len(fileHeader.Filename) >= 3 {
+		format = fileHeader.Filename[len(fileHeader.Filename)-3:]
+	}
 
 	if format != "mp3" && format != "wav" && format != "aac" {
 		return audioMeta, errors.New(" format haye mp3 , wav , aac pazirofte mishavad")
@@ -424,7 +427,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 	err := r.ParseMultipartForm(2 << 20) //2 MB
 
 	if err != nil {
-		return "", err
+		return "", errors.New("1111111111")
 	}
 
 	fileByteData := []FileBytesMeta{}
@@ -434,12 +437,12 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 		file, err := fileHeader.Open()
 
 		if err != nil {
-			return "", err
+			return "", errors.New("222222222222")
 		}
 
 		byteArray, err := ioutil.ReadAll(file)
 		if err != nil {
-			return "", err
+			return "", errors.New("33333333333333333")
 		}
 
 		fileBytesMeta := FileBytesMeta{}
@@ -451,7 +454,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 		err = file.Close()
 
 		if err != nil {
-			return "", err
+			return "", errors.New("5555555555")
 		}
 
 		byteArray = nil
@@ -585,6 +588,7 @@ func PostBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap ma
 		fileByteData = nil
 
 		if response.StatusCode() != http.StatusOK {
+			//return "", errors.New("error status " + fmt.Sprint(response.String()))
 			return "", errors.New("error status " + fmt.Sprint(response.String()))
 		} else {
 			return response.String(), nil
