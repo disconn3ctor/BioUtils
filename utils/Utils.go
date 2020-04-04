@@ -568,24 +568,29 @@ func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string) ([]Fil
 }
 
 func PostBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap map[string]string, url string) (string, error) {
-	restyClient := resty.New().R()
 
-	for _, value := range fileByteData {
-		restyClient.SetFileReader(key, value.Name, value.Reader)
-	}
+	if len(fileByteData) != 0 {
+		restyClient := resty.New().R()
 
-	response, err := restyClient.SetFormData(formDataMap).Post(url)
-	if err != nil {
-		return "", err
-	}
-	defer func() { restyClient = nil }()
+		for _, value := range fileByteData {
+			restyClient.SetFileReader(key, value.Name, value.Reader)
+		}
 
-	fileByteData = nil
+		response, err := restyClient.SetFormData(formDataMap).Post(url)
+		if err != nil {
+			return "", err
+		}
+		defer func() { restyClient = nil }()
 
-	if response.StatusCode() != http.StatusOK {
-		return "", errors.New("error status " + fmt.Sprint(response.String()))
+		fileByteData = nil
+
+		if response.StatusCode() != http.StatusOK {
+			return "", errors.New("error status " + fmt.Sprint(response.String()))
+		} else {
+			return response.String(), nil
+		}
 	} else {
-		return response.String(), nil
+		return "", nil
 	}
 
 }
