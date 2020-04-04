@@ -569,7 +569,7 @@ func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string) ([]Fil
 
 func PostBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap map[string]string, url string) (string, error) {
 
-	if len(fileByteData) != 0 {
+	if len(fileByteData) != 0 { //
 		restyClient := resty.New().R()
 
 		for _, value := range fileByteData {
