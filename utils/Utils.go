@@ -39,11 +39,9 @@ type AudioMeta struct {
 	Bitrate int
 }
 
-
-
 type FileBytesMeta struct {
 	Reader *bytes.Reader
-	Name string
+	Name   string
 }
 
 type Sizer interface {
@@ -173,7 +171,6 @@ func ImageWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxW
 	return fileName + "." + format, nil
 }
 
-
 func WriteAllPostVideoFromRequest(r *http.Request, keyFileValue string, path string, maxSize int) (chan string, error) {
 
 	err := r.ParseMultipartForm(2 << 20) //2 MB
@@ -207,9 +204,7 @@ func WriteAllPostVideoFromRequest(r *http.Request, keyFileValue string, path str
 	return nil, nil
 }
 
-
 func VideoWriterByFileHeader(fileHeader *multipart.FileHeader, path string, maxSize int) (string, error) {
-
 
 	format := fileHeader.Filename[len(fileHeader.Filename)-3:]
 
@@ -382,7 +377,7 @@ func FolderMaker(path string) error {
 	return nil
 }
 
-func ParsFormValue(key string , r *http.Request) error { ////
+func ParsFormValue(key string, r *http.Request) error { ////
 
 	if r.Form == nil {
 		_ = r.ParseMultipartForm(2 << 20)
@@ -404,7 +399,7 @@ func ExteraxtTokenFromHeader(key string, r *http.Request) (string, error) {
 
 	} else {
 		bearerTokenSlice := strings.Split(authorizationValue, " ")
-		if bearerTokenSlice[0] != "Bearer" || len(bearerTokenSlice) < 2{
+		if bearerTokenSlice[0] != "Bearer" || len(bearerTokenSlice) < 2 {
 			return "", errors.New("kalameye kelidye Bearer ya token ersal nashode ast ")
 		}
 
@@ -437,7 +432,6 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 	for _, fileHeader := range r.MultipartForm.File[fileKey] {
 
 		file, err := fileHeader.Open()
-
 
 		if err != nil {
 			return "", err
@@ -474,7 +468,7 @@ func PostAllFileToThisURL(r *http.Request, fileKey string, formDataMap map[strin
 	return "", nil
 }
 
-func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
+func GetUTF8DataFromRequest(r *http.Request, fileKey string) ([]string, error) {
 
 	var dataArray []string
 	err := r.ParseMultipartForm(2 << 20) //2 MB
@@ -488,12 +482,12 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 		file, err := fileHeader.Open()
 
 		if err != nil {
-			return nil , err
+			return nil, err
 		}
 
 		byteArray, err := ioutil.ReadAll(file)
 		if err != nil {
-			return nil , err
+			return nil, err
 		}
 
 		strValue := ""
@@ -517,12 +511,11 @@ func GetUTF8DataFromRequest(r *http.Request, fileKey string)([]string, error){
 
 	}
 
-	return dataArray , nil
+	return dataArray, nil
 
 }
 
-
-func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]FileBytesMeta, error){
+func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string) ([]FileBytesMeta, error) {
 
 	var fileBytesMetasArray []FileBytesMeta
 	err := r.ParseMultipartForm(2 << 20) //2 MB
@@ -535,28 +528,30 @@ func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]File
 
 		file, err := fileHeader.Open()
 
-
 		if err != nil {
-			return nil , err
+			return nil, err
 		}
 
 		byteArray, err := ioutil.ReadAll(file)
 		if err != nil {
-			return nil , err
+			return nil, err
 		}
 
 		ioReader := bytes.NewReader(byteArray)
 
 		metadata, err := tag.ReadFrom(ioReader)
 		if err != nil {
-			return nil , err
+			return nil, err
 		}
 
 		fileMeta := FileBytesMeta{}
-		fileMeta.Name = "albumArt"+fmt.Sprint(i)+"."+metadata.Picture().Ext
-		fileMeta.Reader = bytes.NewReader(metadata.Picture().Data)
 
-		fileBytesMetasArray = append(fileBytesMetasArray, fileMeta)
+		if metadata.Picture() != nil {
+			fileMeta.Name = "albumArt" + fmt.Sprint(i) + "." + metadata.Picture().Ext
+			fileMeta.Reader = bytes.NewReader(metadata.Picture().Data)
+
+			fileBytesMetasArray = append(fileBytesMetasArray, fileMeta)
+		}
 
 		err = file.Close()
 
@@ -572,8 +567,7 @@ func GetAudioAlbumArtIoReaderFromRequest(r *http.Request, fileKey string)([]File
 
 }
 
-
-func PostBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap map[string]string, url string ) (string, error) {
+func PostBytesToThisURL(fileByteData []FileBytesMeta, key string, formDataMap map[string]string, url string) (string, error) {
 	restyClient := resty.New().R()
 
 	for _, value := range fileByteData {
